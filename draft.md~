@@ -173,14 +173,22 @@ An [AppImage] **SHOULD** ship AppStream metadata in `usr/share/metainfo/$ID.xml`
 
 #### Update information
 
+<<<<<<< 56404d5f8dd9379072b41e29c7bb7e232e533eca
 An [AppImage] **MAY** have [update information] embedded for exactly one transport mechanism. The location in which this information is stored is defined by the [image format](#image-format). Currently two transport mechanisms are available, but only one can be used for each given [AppImage]:
+=======
+#### Update information
+>>>>>>> Reference links and table of contents
 
  * [zsync]
  * bintray-zsync
  
 ##### zsync
 
+<<<<<<< 56404d5f8dd9379072b41e29c7bb7e232e533eca
 The __[zsync]__ transport requires a HTTP server that can handle HTTP range requests. Its [update information] is in the form
+=======
+The __[zsync]__ transport requires a HTTP server that can handle HTTP range requests. Its update information is in the form
+>>>>>>> Reference links and table of contents
 
 ```
 zsync|http://server.domain/path/Application-latest-x86_64.AppImage.zsync
@@ -197,7 +205,11 @@ For an overview about [zsync] and how to create `.zsync` files, see [http://zsyn
 
 ##### bintray-zsync
 
+<<<<<<< 56404d5f8dd9379072b41e29c7bb7e232e533eca
 The __bintray-zsync__ transport extends the [zsync] transport in that it uses version information from [Bintray](http://bintray.com/). Its [update information] is in the form
+=======
+The __bintray-zsync__ transport extends the [zsync] transport in that it uses version information from [Bintray](http://bintray.com/). Its update information is in the form
+>>>>>>> Reference links and table of contents
 
 ```
 bintray-zsync|probono|AppImages|Subsurface|Subsurface-_latestVersion-x86_64.AppImage.zsync
@@ -215,10 +227,16 @@ Bintray zsync path | String | `Subsurface-_latestVersion-x86_64.AppImage.zsync` 
 
 ### Desktop integration
 
+<<<<<<< 56404d5f8dd9379072b41e29c7bb7e232e533eca
 The software inside the [AppImage] **MAY** integrate into the desktop environment (e.g., by installing a [.desktop file] into the host system) on the user's behalf. However if it does so, it *SHOULD* ensure to get the explicit permission of the user, e.g., by asking for permission in a GUI window, or by reacting to a command line argument.
 
 The software inside the [AppImage] **SHOULD NOT** attempt to do desktop integration if at least one of the following conditions are met:
 
+=======
+The software inside the AppImage **MAY** integrate into the desktop environment (e.g., by installing a [.desktop file] into the host system) on the user's behalf. However if it does so, it *SHOULD* ensure to get the explicit permission of the user, e.g., by asking for permission in a GUI window, or by reacting to a command line argument.
+
+The software inside the AppImage **SHOULD NOT** attempt to do desktop integration if at least one of the following conditions are met:
+>>>>>>> Reference links and table of contents
 * A file `$HOME/.local/share/appimagekit/no_desktopintegration` exists on the [target system]
 * A file `/usr/share/appimagekit/no_desktopintegration` exists on the [target system]
 * A file `/etc/appimagekit/no_desktopintegration` exists on the [target system]
