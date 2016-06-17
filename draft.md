@@ -12,9 +12,14 @@ The AppImage Specification is licensed under [The MIT License](https://github.co
 * [Revision History]
 * [Definitions]
 * [Specification]
-    - [Image format]
-        + [Type 0]
-        + [Type 1]
+    - [General Format]
+    - [Runtime Behavior]
+        + [Initial Run]
+        + [Subsequent Runs]
+        + [Every Run]
+    - [AppImage Types]
+        + [Type 000]
+        + [Type 001]
     - [Contents of the image]
         + [The filesystem image]
         + [The AppRun file]
@@ -28,9 +33,14 @@ The AppImage Specification is licensed under [The MIT License](https://github.co
 [Revision History]: #revision-history "Revision History"
 [Definitions]: #definitions "Definitions"
 [Specification]: #specification "Specification"
-[Image Format]: #image-format "Specification - Image Format"
-  [Type 0]: #type-0 "Specification - Image Format - Type 0"
-  [Type 1]: #type-1 "Specification - Image Format - Type 1"
+[General Format]: #general-format "Specification - General Format"
+[Runtime Behavior]: #runtime-behavior "Specification - Runtime Behavior"
+  [Initial Run]: #initial-run "Specification - Runtime Behavior - Initial Run"
+  [Subsequent Runs]: #subsequent-runs "Specification - Runtime Behavior - Subsequent Runs"
+  [Every Run]: #every-run "Specification - Runtime Behavior - Every Run"
+[AppImage Types]: #appimage-types "Specification - AppImage Types"
+  [Type 000]: #type-000 "Specification - Image Format - Type 000"
+  [Type 001]: #type-001 "Specification - Image Format - Type 001"
 [Contents of the image]: #contents-of-the-image "Specification - Contents of the image"
   [The filesystem image]: #the-filesystem-image "Specification - Contents of the image - The filesystem image"
   [The AppRun file]: #the-apprun-file "Specification - Contents of the image - The AppRun file"
@@ -45,6 +55,17 @@ The AppImage Specification is licensed under [The MIT License](https://github.co
 
 The AppImage Specification describes [AppImage], a portable format for deploying software applications to Linux-based operating systems. The Specification may be expanded to include other operating systems in the future.
 
+The AppImage format is designed to meet the needs of users and developers alike. The main strengths are:
+
+ - **P**ortabilty - the same file will run on the majority of Linux distributions without requiring installation or root priviledges.
+ - **I**ntegrety - AppImages can be obtained straight from the upstream developer with no intermediaries.
+ - **E**fficiency - a single, unified format enables fast turnarounds with Linux releases available from Day 1.
+ - **S**implicity - *"one app equals one file"*. Libraries and resources are included in the AppImage.
+
+The AppImage format has been over ten years in the making, and AppImages are available now for some of the most popular open source programs. This inititial version of the Specification seeks to formalize the features common to the majority of AppImages in existence today. Future versions of the Specification will impose new requirements.
+
+A key advantage of the AppImage format over other packaging formats is flexibility. AppImages do not require any form of package management system. In addition, many aspects of the Specification are optional and there are few strict requirements. However, it benefits users and developers when software applications behave in a manner that is consistent and predictable, so developers are encouraged to follow all parts of the Specification as closely as possible.
+
 
 ## Revision History
 
@@ -56,7 +77,7 @@ Draft | 2016-06-15 | Initial draft of the AppImage Specification started
 ## Definitions
 
 ##### AppDir
-Application directories as used in the [ROX Desktop](http://rox.sourceforge.net/) - <http://rox.sourceforge.net/desktop/AppDirs.html>
+Application directories [as used in the ROX desktop](http://rox.sourceforge.net/desktop/AppDirs.html), or the extracted contents of an AppImage.
 
 [AppDir]: #appdir "AppDir: Application Directory (as used in the ROX Desktop)"
 
@@ -68,6 +89,18 @@ An application executable that has been packaged in the AppImage format. (Exampl
 The portable packaging format defined in this Specification, which can be used to deploy applications to Linux systems.
 
 [AppImage]: #appimage "AppImage: The packaging format defined in this Specification, or an application packaged in this format"
+
+##### AppImage Standards Version
+The version of this Specification with which a particular AppImage complies. (Identified in the [Metadata])
+
+[AppImage Standards Version]: #appimage-standards-version "AppImage Standards Version: The version of this Specification with which a particular AppImage complies. (Identified in the Metadata)"
+
+##### AppImage Type
+The representation of an AppImage on disk. Identified by a **Type Byte** (0x00-0xFF) or equivalent **Decimal Type** (000-255).
+
+[AppImage Type]: #appimage-type "AppImage Type: The representation of an AppImage on disk. Identified by a Type Byte (0x00-0xFF) or equivalent 3-digit Decimal Type (000-255)."
+[Type Byte]: #appimage-type "Type Byte: A magic byte of range 0x00 to 0xFF that is used to identify the AppImage Type"
+[Decimal Type]: #appimage-type "Decimal Type: A 3-digit decimal representation of the Type Byte, ranging from 000-255"
 
 ##### AppImageKit
 A reference implementation of a tool for building AppImages in compliance with this Specification. (Available [here](https://github.com/probonopd/AppImageKit))
@@ -108,15 +141,91 @@ A file transfer program that facilitates [delta updates] - <http://zsync.moria.o
 ## Specification
 
 
-### Image format
+### General Format
 
-The image format determines how an [AppImage] is represented on disk. Currently there is only one defined image format, however, there could be additional image formats in the future.
+(The key word "SHOULD" in this section will be replaced with "MUST" in a future version of the Specification.)
 
-#### Type 0
+An AppImage **SHOULD** present itself to the user as a single executable file which, when distributed:
 
-Reserved for not fully standards-compliant AppImages (e.g., portable binaries that look and behave like AppImages on a user level, but do not conform to a standard on a programming level). 
+* has the `.AppImage` file extension
+* has the magic bytes `AIx` at offset 8, where `A` and `I` are ASCII characters and `x` is the [Type Byte], **OR**
+* has the ASCII sequence `AppImage###` in the first 128 bytes of the file, where `###` is the 3 digit [Decimal Type]
+* obeys the following naming convention for official release builds:
+    - `AppName-$VERSION-$ARCH.AppImage` (e.g. `Subsurface-4.5.6-x86_64.AppImage`), where:
+        + `AppName` is the ordinary name of the [payload application], **NOT** a command line alias
+        + `$VERSION` is the version of the [payload application], X.Y.Z [Semantic Version](http://semver.org/) or similar
+        + `$ARCH` is the output of the UNIX command `arch` or `uname -m` on the [target system]
+    - **OR** `<AppName>-<version>.AppImage` if capable of running on multiple architectures
+* clearly distinguishes nightly, development or pre-release builds from official releases. Examples of this:
+    - Nightly: `MuseScoreNightly-201602261810-master-a6ec8aa-x86_64.AppImage` (`$DATE-$BRANCH-$COMMIT-$ARCH`)
+    - Pre-release: `MuseScore-2.0.0_beta.1-x86_64.AppImage`
 
-#### Type 1
+Providing that user still has execute permission, the AppImage **SHOULD** continue to function as intended, even if:
+
+* file name or extension are changed
+* the file name or path contains spaces or special characters
+* the file is moved or placed on removable media
+
+
+### Runtime Behavior
+
+#### Initial Run
+
+When a user attempts to run an AppImage for the first time, the AppImage:
+
+* **MUST NOT** require any form of installation other than the granting of execute permission
+* **SHOULD** offer to perform installation or [desktop integration] as an optional feature
+
+#### Subsequent Runs
+
+AppImages **MUST NOT** offer to perform installation or [desktop integration] if it has already been done
+
+#### Every Run
+
+Whenever it is executed, an AppImages:
+
+* **MUST NOT** require root or administrator priviledges **UNLESS** the primary purpose of the [payload application] is to perform a task that requires such priviledges
+* **MUST** make it clear to the user why root or administrator priviledges are required if such priviledges are required
+
+Executing the AppImage **MUST** result in the launch of the [payload application] **UNLESS**:
+
+* the user explicitly chose not to do so, for example by specifying a pertinent command line option
+* it was unsafe or unable to do so, in which case the user **SHOULD** be given a reason
+
+The AppImage **SHOULD** pass on any command line arguments and environment variables to the [payload application] either directly or indirectly (i.e., by invoking other helper binaries or scripts which, in turn, launch the [payload application]) unless the argument or environment variable was intended for the helper executable and not the [payload application]
+
+It **MUST** be safe to have multiple AppImage and/or non-AppImage versions of the [payload application] on the same machine. In particular, the AppImage or [payload application]:
+
+* **SHOULD NOT** cause conflicts if run alongside another instance of itself or any version of the [payload application]
+* **MUST** refuse to run if another instance is already running and conflicts would otherwise occur
+
+**If** the AppImage file is an archive, ISO image, or other container format and it contains files that need to be outside the AppImage at runtime, **THEN** the AppImage:
+
+* **MUST**, on being executed, create a temporary directory in `/tmp' or another suitable location on the user's hard drive the contents of which are not persistent when the computer is rebooted
+* **MUST** give the tempory directory a name that includes characters which are generated randomly at runtime
+* **MUST** extract its contents to this temporary directory
+* **MUST NOT** give any scope (user/group/other) write permission to any files or directories inside the tempory directory
+* **MUST** delete the temporary directory once it has finished executing
+
+
+### AppImage Types
+
+**IMPORTANT** - AppImage Types **DO NOT** correspond to particular versions of the AppImage Specification!
+
+The AppImage Type determines how an AppImage is represented on disk. Types can be identified by:
+
+* A **[Type Byte]** in the range `0x00` to `0xFF`
+* A corresponding 3 digit **[Decimal Type]** in the range 000 to 255
+
+Currently only two types are defined, but there may be more Types in the future. A 3rd party program that interacts with AppImages should use the AppImage Type to determine how to access the AppImage [Metadata]. The Metadata contains the [AppImage Standards Version], which corresponds to the version of this Specification with which the AppImage complies. The AppImage Type and Standards Version together determine how the program may interact with the AppImage.
+
+#### Type 000
+**Type Byte: `0x00`**
+
+The "other" type. These files look and behave like AppImages but are implemented differently internally. They **MUST** conform to all parts of the Specification, but because they do not fall into a defined Type they are not guaranteed to work with 3rd party programs that rely on a particular internal structure.
+
+#### Type 001
+**Type Byte: `0x01`**
 
 An [AppImage] which conforms to the type 1 image format:
 
@@ -126,11 +235,8 @@ An [AppImage] which conforms to the type 1 image format:
 * **SHOULD** use [zisofs](http://libburnia-project.org/wiki/zisofs) compression
 * **MUST** be a vaild [ELF](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format) executable 
 * **MUST**, when executed, mount the [AppImage] and execute the executable file `AppRun` contained in the root of the ISO 9660 filesystem
-* **MUST NOT** rely on any specific file name extension, although it is **RECOMMENDED** that the file name extension `.AppImage` is used whenever a file name extension is desired. Futher it is **RECOMMENDED** to follow the naming scheme `ApplicationName-$VERSION-$ARCH.AppImage` in cases in which it is desired to convey this information in the file name
 * **SHOULD** not be encapsulated in another archive/container format during download or when stored
-* **MUST** work even when stored in a filesystem path that contains blanks or when stored with a file name that contains blanks
 * **MAY** embed [update information] in the ISO 9660 Volume Descriptor field (offset 33651). If the information in this location is not in one of the known [update information] formats, then it **SHOULD** be empty and/or be ignored
-* **SHOULD** contain the magic hex `0x414901` at offset 8 ([why?](https://github.com/probonopd/AppImageKit/issues/144))
 
 
 ### Contents of the image
@@ -141,7 +247,7 @@ An [AppImage] which conforms to the type 1 image format:
 * **MUST** contain a file named `AppRun` in its root directory
 * **SHOULD** contain a [payload application] that is ultimately executed when the [AppImage] is executed
 * **SHOULD** contain exactly one `$APPNAME.desktop` file in its root directory with `$APPNAME` being the name of the [payload application]
-* **MAY** contain an `$APPNAME.png` file in its root directory with `$APPNAME` being the name of the [payload application] as set in the `Icon=` key of the `$APPNAME.desktop` file. If present, this icon **SHOULD** be given preference as the icon being used to represent the [AppImage]. The icon **SHOULD** be a png with 256x256 or 512*512 pixels
+* **MAY** contain an `$APPNAME.svg` or `$APPNAME.png` file in its root directory with `$APPNAME` being the name of the [payload application] as set in the `Icon=` key of the `$APPNAME.desktop` file. If present, this icon **SHOULD** be given preference as the icon being used to represent the [AppImage]. The icon **SHOULD** be an SVG or PNG with 256x256 or 512*512 pixels
 * **SHOULD** contain a `.DirIcon` file as per the [AppDir] specification
 
 #### The `AppRun` file:
@@ -150,9 +256,7 @@ An [AppImage] which conforms to the type 1 image format:
 * **MAY** be an ELF binary or an interpreted script
 * If it is an ELF binary, it **SHOULD** have as few runtime dependencies as possible
 * If it is an interpreted script, it **SHOULD** be written in a language in which an interpreter can be assumed to be available on every [target system]
-* **MUST** work even when stored in a filesystem path that contains blanks
-* **SHOULD** pass any arguments passed to it to the [payload application] either directly or indirectly (i.e., by invoking other helper binaries or scripts which, in turn, launch the [payload application]) if it is not explicitly deemed useful otherwise
-* **SHOULD** pass any environment variables passed to it to the [payload application] either directly or indirectly (i.e., by invoking other helper binaries or scripts which, in turn, launch the [payload application]) if it is not explicitly deemed useful otherwise
+* **SHOULD** pass any arguments and environment variables passed to it to the [payload application] either directly or indirectly (i.e., by invoking other helper binaries or scripts which, in turn, launch the [payload application]) if it is not explicitly deemed useful otherwise
 * **MAY** `cd` to a directory inside the [AppImage] at runtime before executing the [payload application], commonly `./usr/` 
 
 #### The [payload application]:
